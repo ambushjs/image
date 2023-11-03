@@ -17,6 +17,9 @@
     "lib": "./src",
     "test": "./test"
   },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "scripts": {
     "start": "node src",
     "lint": "eslint .",
@@ -35,7 +38,8 @@
   "files": [
     "src/"
   ],
-  "dependencies": {
-    "pngjs": "^7.0.0"
+  "devDependencies": {
+    "eslint": "^8.52.0",
+    "standard-version": "^9.5.0"
   }
 }

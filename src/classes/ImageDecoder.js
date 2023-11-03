@@ -1,4 +1,4 @@
-const { PNG } = require('pngjs');
+const { decodePNG } = require('../processors/png');
 const { decodeBMP } = require('../processors/bmp');
 const { decode, decodeImage, toRGBA8 } = require('../processors/tiff');
 const decodeJPEG = require('../decoders/jpeg');
@@ -15,7 +15,7 @@ module.exports = class ImageDecoder {
     }
 
     png(buffer) {
-        return PNG.sync.read(buffer);
+        return decodePNG(buffer);
     }
 
     bmp(buffer) {

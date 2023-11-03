@@ -1,4 +1,4 @@
-const { PNG } = require('pngjs');
+const { encodePNG } = require('../processors/png');
 const { encodeBMP } = require('../processors/bmp');
 const { encodeImage } = require('../processors/tiff');
 const encodeJPEG = require('../encoders/jpeg');
@@ -18,7 +18,7 @@ module.exports = class ImageEncoder {
         return {
             width: data.width,
             height: data.height,
-            data: PNG.sync.write(data),
+            data: encodePNG(data),
             format: 'png',
         };
     }

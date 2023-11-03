@@ -137,7 +137,6 @@
                 "allowSingleLine": true
             }
         ],
-        "camelcase": "warn",
         "comma-style": [
             "warn",
             "last"
@@ -145,10 +144,6 @@
         "consistent-this": [
             "warn",
             "self"
-        ],
-        "array-element-newline": [
-            "error",
-            "never"
         ],
         "eol-last": "warn",
         "func-names": "warn",
@@ -194,7 +189,6 @@
         "no-spaced-func": "warn",
         "no-ternary": "off",
         "no-trailing-spaces": "warn",
-        "no-underscore-dangle": "warn",
         "no-unneeded-ternary": "warn",
         "one-var": "off",
         "operator-linebreak": [

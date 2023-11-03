@@ -1,6 +1,6 @@
 
 
-class BMP {
+class BmpDecoder {
     constructor(buffer, alpha) {
         this.pos = 0;
         this.buffer = buffer;
@@ -369,6 +369,6 @@ class BMP {
 }
 
 module.exports = (buffer) => {
-    const { width, height, data, format } = new BMP(buffer);
+    const { width, height, data, format } = new BmpDecoder(buffer);
     return { width, height, data, format };
 };

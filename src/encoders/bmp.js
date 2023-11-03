@@ -1,4 +1,4 @@
-class BMP {
+class BmpEncoder {
     constructor(data) {
         this.buffer = data.data;
         this.width = data.width;
@@ -63,7 +63,7 @@ class BMP {
 
 module.exports = function bmp(data) {
     return {
-        data: new BMP(data).encode(),
+        data: new BmpEncoder(data).encode(),
         width: data.width,
         height: data.height,
     };
