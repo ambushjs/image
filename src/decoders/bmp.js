@@ -368,4 +368,7 @@ class BMP {
     }
 }
 
-module.exports = (data) => new BMP(data);
+module.exports = (data) => {
+    const { width, height, data, format } = new BMP(data);
+    return { width, height, data, format };
+}

@@ -724,12 +724,6 @@ const JpegImage = (function jpeg() {
                         }
                     }
 
-                    if (fileMarker === 0xFFE1) {
-                        if (appData[0] === 0x45 && appData[1] === 0x78 && appData[2] === 0x69 && appData[3] === 0x66 && appData[4] === 0) {
-                            this.exifBuffer = appData.subarray(5, appData.length);
-                        }
-                    }
-
                     if (fileMarker === 0xFFEE) {
                         if (appData[0] === 0x41 && appData[1] === 0x64 && appData[2] === 0x6F && appData[3] === 0x62 && appData[4] === 0x65 && appData[5] === 0) {
                             adobe = {
@@ -1188,7 +1182,6 @@ module.exports = function decode(data) {
     const image = {
         width: decoder.width,
         height: decoder.height,
-        exifBuffer: decoder.exifBuffer,
         data: Buffer.alloc(bytesNeeded),
         format: 'jpeg',
         ...decoder.comments.length > 0 && { comments: decoder.comments },
