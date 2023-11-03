@@ -12,9 +12,6 @@
   "bugs": {
     "url": "https://github.com/ambushjs/image/issues"
   },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
   "main": "./src/index.js",
   "directories": {
     "lib": "./src",
