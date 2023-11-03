@@ -1,0 +1,41 @@
+{
+  "name": "image",
+  "version": "1.0.0",
+  "description": "All-in-one library to decode & encode images.",
+  "license": "Apache-2.0",
+  "author": "Zeptar <thezeptar@gmail.com>",
+  "homepage": "https://github.com/ambushjs/image#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ambushjs/image.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ambushjs/image/issues"
+  },
+  "main": "./src/index.js",
+  "directories": {
+    "lib": "./src",
+    "test": "./test"
+  },
+  "scripts": {
+    "start": "node src",
+    "lint": "eslint .",
+    "fix": "eslint . --fix",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "typings": "./src/index.d.ts",
+  "keywords": [
+    "ambush",
+    "decoder",
+    "encoder",
+    "image",
+    "manipulation",
+    "process"
+  ],
+  "devDependencies": {
+    "eslint": "^8.52.0"
+  },
+  "dependencies": {
+    "pngjs": "^7.0.0"
+  }
+}
