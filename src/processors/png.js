@@ -70,9 +70,7 @@ const interlaceUtils = {
                 else break;
             }
 
-            if (passWidth > 0 && passHeight > 0) {
-                images.push({ width: passWidth, height: passHeight, index: i });
-            }
+            if (passWidth > 0 && passHeight > 0) images.push({ width: passWidth, height: passHeight, index: i });
         }
 
         return images;
@@ -217,20 +215,13 @@ class Parser {
 
         let ancillary = Boolean(data[4] & 0x20);
 
-        if (!this._hasIHDR && type !== constants.TYPE_IHDR) {
-            return this.error(new Error('Expected IHDR on beggining'));
-        }
+        if (!this._hasIHDR && type !== constants.TYPE_IHDR) return this.error(new Error('Expected IHDR on beggining'));
 
         this._crc = new CrcStream();
         this._crc.write(Buffer.from(name));
 
-        if (this._chunks[type]) {
-            return this._chunks[type](length);
-        }
-
-        if (!ancillary) {
-            return this.error(new Error(`Unsupported critical chunk type ${ name}`));
-        }
+        if (this._chunks[type]) return this._chunks[type](length);
+        if (!ancillary) return this.error(new Error(`Unsupported critical chunk type ${ name}`));
 
         this.read(length + 4, this._skipChunk.bind(this));
     }
@@ -265,8 +256,8 @@ class Parser {
         let compr = data[10];
         let filter = data[11];
         let interlace = data[12];
-        if (depth !== 8 && depth !== 4 && depth !== 2 && depth !== 1 && depth !== 16) return this.error(new Error(`Unsupported bit depth ${ depth}`));
 
+        if (depth !== 8 && depth !== 4 && depth !== 2 && depth !== 1 && depth !== 16) return this.error(new Error(`Unsupported bit depth ${ depth}`));
         if (!(colorType in constants.COLORTYPE_TO_BPP_MAP)) return this.error(new Error('Unsupported color type'));
         if (compr !== 0) return this.error(new Error('Unsupported compression method'));
         if (filter !== 0) return this.error(new Error('Unsupported filter method'));
@@ -307,7 +298,6 @@ class Parser {
         }
 
         this.palette(this._palette);
-
         this._handleChunkEnd();
     }
 
@@ -320,23 +310,18 @@ class Parser {
         this._crc.write(data);
 
         if (this._colorType === constants.COLORTYPE_PALETTE_COLOR) {
-            if (this._palette.length === 0) {
-                this.error(new Error('Transparency chunk must be after palette'));
-                return;
-            }
-            if (data.length > this._palette.length) {
-                this.error(new Error('More transparent colors than palette size'));
-                return;
-            }
+            if (this._palette.length === 0) return this.error(new Error('Transparency chunk must be after palette'));
+            if (data.length > this._palette.length) return this.error(new Error('More transparent colors than palette size'));
+
             for (let i = 0; i < data.length; i++) {
-                this._palette[i][3] = data[i];
+                return this._palette[i][3] = data[i];
             }
+
             this.palette(this._palette);
         }
 
-        if (this._colorType === constants.COLORTYPE_GRAYSCALE) {
-            this.transColor([data.readUInt16BE(0)]);
-        }
+        if (this._colorType === constants.COLORTYPE_GRAYSCALE) this.transColor([data.readUInt16BE(0)]);
+
         if (this._colorType === constants.COLORTYPE_COLOR) {
             this.transColor([
                 data.readUInt16BE(0),
@@ -347,51 +332,52 @@ class Parser {
 
         this._handleChunkEnd();
     }
+
     _handleGAMA(length) {
         this.read(length, this._parseGAMA.bind(this));
     }
+
     _parseGAMA(data) {
         this._crc.write(data);
         this.gamma(data.readUInt32BE(0) / constants.GAMMA_DIVISION);
-
         this._handleChunkEnd();
     }
+
     _handleIDAT(length) {
         if (!this._emittedHeadersFinished) {
             this._emittedHeadersFinished = true;
             this.headersFinished();
         }
+
         this.read(-length, this._parseIDAT.bind(this, length));
     }
+
     _parseIDAT(length, data) {
         this._crc.write(data);
 
-        if (this._colorType === constants.COLORTYPE_PALETTE_COLOR &&
-            this._palette.length === 0) {
+        if (this._colorType === constants.COLORTYPE_PALETTE_COLOR && this._palette.length === 0) {
             throw new Error('Expected palette not found');
         }
 
         this.inflateData(data);
+
         let leftOverLength = length - data.length;
 
-        if (leftOverLength > 0) {
-            this._handleIDAT(leftOverLength);
-        } else {
-            this._handleChunkEnd();
-        }
+        if (leftOverLength > 0) this._handleIDAT(leftOverLength);
+        else this._handleChunkEnd();
     }
+
     _handleIEND(length) {
         this.read(length, this._parseIEND.bind(this));
     }
+
     _parseIEND(data) {
         this._crc.write(data);
 
         this._hasIEND = true;
         this._handleChunkEnd();
 
-        if (this.finished) {
-            this.finished();
-        }
+        if (this.finished) this.finished();
     }
 }
 
@@ -408,6 +394,7 @@ function filterSumNone(pxData, pxPos, byteWidth) {
     for (let i = pxPos; i < length; i++) {
         sum += Math.abs(pxData[i]);
     }
+
     return sum;
 }
 
@@ -422,6 +409,7 @@ function filterSub(pxData, pxPos, byteWidth, rawData, rawPos, bpp) {
 
 function filterSumSub(pxData, pxPos, byteWidth, bpp) {
     let sum = 0;
+
     for (let x = 0; x < byteWidth; x++) {
         let left = x >= bpp ? pxData[pxPos + x - bpp] : 0;
         let val = pxData[pxPos + x] - left;
@@ -444,6 +432,7 @@ function filterUp(pxData, pxPos, byteWidth, rawData, rawPos) {
 function filterSumUp(pxData, pxPos, byteWidth) {
     let sum = 0;
     let length = pxPos + byteWidth;
+
     for (let x = pxPos; x < length; x++) {
         let up = pxPos > 0 ? pxData[x - byteWidth] : 0;
         let val = pxData[x] - up;
@@ -466,6 +455,7 @@ function filterAvg(pxData, pxPos, byteWidth, rawData, rawPos, bpp) {
 
 function filterSumAvg(pxData, pxPos, byteWidth, bpp) {
     let sum = 0;
+
     for (let x = 0; x < byteWidth; x++) {
         let left = x >= bpp ? pxData[pxPos + x - bpp] : 0;
         let up = pxPos > 0 ? pxData[pxPos + x - byteWidth] : 0;
@@ -481,8 +471,7 @@ function filterPaeth(pxData, pxPos, byteWidth, rawData, rawPos, bpp) {
     for (let x = 0; x < byteWidth; x++) {
         let left = x >= bpp ? pxData[pxPos + x - bpp] : 0;
         let up = pxPos > 0 ? pxData[pxPos + x - byteWidth] : 0;
-        let upleft =
-            pxPos > 0 && x >= bpp ? pxData[pxPos + x - (byteWidth + bpp)] : 0;
+        let upleft = pxPos > 0 && x >= bpp ? pxData[pxPos + x - (byteWidth + bpp)] : 0;
         let val = pxData[pxPos + x] - paethPredictor(left, up, upleft);
 
         rawData[rawPos + x] = val;
@@ -491,11 +480,11 @@ function filterPaeth(pxData, pxPos, byteWidth, rawData, rawPos, bpp) {
 
 function filterSumPaeth(pxData, pxPos, byteWidth, bpp) {
     let sum = 0;
+
     for (let x = 0; x < byteWidth; x++) {
         let left = x >= bpp ? pxData[pxPos + x - bpp] : 0;
         let up = pxPos > 0 ? pxData[pxPos + x - byteWidth] : 0;
-        let upleft =
-            pxPos > 0 && x >= bpp ? pxData[pxPos + x - (byteWidth + bpp)] : 0;
+        let upleft = pxPos > 0 && x >= bpp ? pxData[pxPos + x - (byteWidth + bpp)] : 0;
         let val = pxData[pxPos + x] - paethPredictor(left, up, upleft);
 
         sum += Math.abs(val);
@@ -523,22 +512,17 @@ let filterSums = {
 function filterPacked(pxData, width, height, options, oldBpp) {
     let bpp = oldBpp;
     let filterTypes = [];
-    if (!('filterType' in options) || options.filterType === -1) {
-        filterTypes = [0, 1, 2, 3, 4];
-    } else if (typeof options.filterType === 'number') {
-        filterTypes = [options.filterType];
-    } else {
-        throw new Error('unrecognised filter types');
-    }
 
-    if (options.bitDepth === 16) {
-        bpp *= 2;
-    }
+    if (!('filterType' in options) || options.filterType === -1) filterTypes = [0, 1, 2, 3, 4];
+    else if (typeof options.filterType === 'number') filterTypes = [options.filterType];
+    else throw new Error('unrecognised filter types');
+
+    if (options.bitDepth === 16) bpp *= 2;
+
     let byteWidth = width * bpp;
     let rawPos = 0;
     let pxPos = 0;
     let rawData = Buffer.alloc((byteWidth + 1) * height);
-
     let sel = filterTypes[0];
 
     for (let y = 0; y < height; y++) {
@@ -547,6 +531,7 @@ function filterPacked(pxData, width, height, options, oldBpp) {
 
             for (let i = 0; i < filterTypes.length; i++) {
                 let sum = filterSums[filterTypes[i]](pxData, pxPos, byteWidth, bpp);
+
                 if (sum < min) {
                     sel = filterTypes[i];
                     min = sum;
@@ -560,58 +545,52 @@ function filterPacked(pxData, width, height, options, oldBpp) {
         rawPos += byteWidth;
         pxPos += byteWidth;
     }
+
     return rawData;
 }
 
 function bitPacker(dataIn, width, height, options) {
-    let outHasAlpha =
-        [constants.COLORTYPE_COLOR_ALPHA, constants.COLORTYPE_ALPHA].indexOf(
-            options.colorType
-        ) !== -1;
+    let outHasAlpha =[constants.COLORTYPE_COLOR_ALPHA, constants.COLORTYPE_ALPHA].indexOf(options.colorType) !== -1;
+
     if (options.colorType === options.inputColorType) {
         let buffer = new ArrayBuffer(2);
+
         new DataView(buffer).setInt16(0, 256, true);
 
         let bigEndian = new Int16Array(buffer)[0] !== 256;
 
-        if (options.bitDepth === 8 || options.bitDepth === 16 && bigEndian) {
-            return dataIn;
-        }
+        if (options.bitDepth === 8 || options.bitDepth === 16 && bigEndian) return dataIn;
     }
 
     let data = options.bitDepth !== 16 ? dataIn : new Uint16Array(dataIn.buffer);
-
     let maxValue = 255;
     let inBpp = constants.COLORTYPE_TO_BPP_MAP[options.inputColorType];
-    if (inBpp === 4 && !options.inputHasAlpha) {
-        inBpp = 3;
-    }
+
+    if (inBpp === 4 && !options.inputHasAlpha) inBpp = 3;
+
     let outBpp = constants.COLORTYPE_TO_BPP_MAP[options.colorType];
+
     if (options.bitDepth === 16) {
         maxValue = 65535;
         outBpp *= 2;
     }
-    let outData = Buffer.alloc(width * height * outBpp);
 
+    let outData = Buffer.alloc(width * height * outBpp);
     let inIndex = 0;
     let outIndex = 0;
 
     let bgColor = options.bgColor || {};
-    if (bgColor.red === undefined) {
-        bgColor.red = maxValue;
-    }
-    if (bgColor.green === undefined) {
-        bgColor.green = maxValue;
-    }
-    if (bgColor.blue === undefined) {
-        bgColor.blue = maxValue;
-    }
+
+    if (bgColor.red === undefined) bgColor.red = maxValue;
+    if (bgColor.green === undefined) bgColor.green = maxValue;
+    if (bgColor.blue === undefined) bgColor.blue = maxValue;
 
     function getRGBA() {
         let red = 0;
         let green = 0;
         let blue = 0;
         let alpha = maxValue;
+
         switch (options.inputColorType) {
         case constants.COLORTYPE_COLOR_ALPHA:
             alpha = data[inIndex + 3];
@@ -636,30 +615,18 @@ function bitPacker(dataIn, width, height, options) {
             blue = red;
             break;
         default:
-            throw new Error(
-                `input color type:${
-                    options.inputColorType
-                } is not supported at present`
-            );
+            throw new Error(`input color type: ${options.inputColorType} is not supported at present`);
         }
 
         if (options.inputHasAlpha) {
             if (!outHasAlpha) {
                 alpha /= maxValue;
-                red = Math.min(
-                    Math.max(Math.round((1 - alpha) * bgColor.red + alpha * red), 0),
-                    maxValue
-                );
-                green = Math.min(
-                    Math.max(Math.round((1 - alpha) * bgColor.green + alpha * green), 0),
-                    maxValue
-                );
-                blue = Math.min(
-                    Math.max(Math.round((1 - alpha) * bgColor.blue + alpha * blue), 0),
-                    maxValue
-                );
+                red = Math.min(Math.max(Math.round((1 - alpha) * bgColor.red + alpha * red), 0), maxValue);
+                green = Math.min(Math.max(Math.round((1 - alpha) * bgColor.green + alpha * green), 0), maxValue);
+                blue = Math.min(Math.max(Math.round((1 - alpha) * bgColor.blue + alpha * blue), 0), maxValue);
             }
         }
+
         return { red, green, blue, alpha };
     }
 
@@ -674,32 +641,31 @@ function bitPacker(dataIn, width, height, options) {
                     outData[outIndex] = rgba.red;
                     outData[outIndex + 1] = rgba.green;
                     outData[outIndex + 2] = rgba.blue;
-                    if (outHasAlpha) {
-                        outData[outIndex + 3] = rgba.alpha;
-                    }
+
+                    if (outHasAlpha) outData[outIndex + 3] = rgba.alpha;
                 } else {
                     outData.writeUInt16BE(rgba.red, outIndex);
                     outData.writeUInt16BE(rgba.green, outIndex + 2);
                     outData.writeUInt16BE(rgba.blue, outIndex + 4);
-                    if (outHasAlpha) {
-                        outData.writeUInt16BE(rgba.alpha, outIndex + 6);
-                    }
+
+                    if (outHasAlpha) outData.writeUInt16BE(rgba.alpha, outIndex + 6);
                 }
+
                 break;
             case constants.COLORTYPE_ALPHA:
             case constants.COLORTYPE_GRAYSCALE: {
                 let grayscale = (rgba.red + rgba.green + rgba.blue) / 3;
+
                 if (options.bitDepth === 8) {
                     outData[outIndex] = grayscale;
-                    if (outHasAlpha) {
-                        outData[outIndex + 1] = rgba.alpha;
-                    }
+
+                    if (outHasAlpha) outData[outIndex + 1] = rgba.alpha;
                 } else {
                     outData.writeUInt16BE(grayscale, outIndex);
-                    if (outHasAlpha) {
-                        outData.writeUInt16BE(rgba.alpha, outIndex + 2);
-                    }
+
+                    if (outHasAlpha) outData.writeUInt16BE(rgba.alpha, outIndex + 2);
                 }
+
                 break;
             }
             default:
@@ -719,51 +685,27 @@ class Packer {
         this._options = options;
 
         options.deflateChunkSize = options.deflateChunkSize || 32 * 1024;
-        options.deflateLevel =
-            options.deflateLevel !== null ? options.deflateLevel : 9;
-        options.deflateStrategy =
-            options.deflateStrategy !== null ? options.deflateStrategy : 3;
-        options.inputHasAlpha =
-            options.inputHasAlpha !== null ? options.inputHasAlpha : true;
+        options.deflateLevel = options.deflateLevel !== null ? options.deflateLevel : 9;
+        options.deflateStrategy = options.deflateStrategy !== null ? options.deflateStrategy : 3;
+        options.inputHasAlpha = options.inputHasAlpha !== null ? options.inputHasAlpha : true;
         options.deflateFactory = options.deflateFactory || zlib.createDeflate;
         options.bitDepth = options.bitDepth || 8;
-        options.colorType =
-            typeof options.colorType === 'number' ?
-                options.colorType :
-                constants.COLORTYPE_COLOR_ALPHA;
-        options.inputColorType =
-            typeof options.inputColorType === 'number' ?
-                options.inputColorType :
-                constants.COLORTYPE_COLOR_ALPHA;
+        options.colorType = typeof options.colorType === 'number' ? options.colorType : constants.COLORTYPE_COLOR_ALPHA;
+        options.inputColorType = typeof options.inputColorType === 'number' ? options.inputColorType : constants.COLORTYPE_COLOR_ALPHA;
 
-        if ([
-            constants.COLORTYPE_GRAYSCALE,
-            constants.COLORTYPE_COLOR,
-            constants.COLORTYPE_COLOR_ALPHA,
-            constants.COLORTYPE_ALPHA,
-        ].indexOf(options.colorType) === -1) {
-            throw new Error(
-                `option color type:${ options.colorType } is not supported at present`
-            );
+        if ([constants.COLORTYPE_GRAYSCALE, constants.COLORTYPE_COLOR, constants.COLORTYPE_COLOR_ALPHA, constants.COLORTYPE_ALPHA].indexOf(options.colorType) === -1) {
+            throw new Error(`option color type: ${options.colorType} is not supported at present`);
         }
-        if ([
-            constants.COLORTYPE_GRAYSCALE,
-            constants.COLORTYPE_COLOR,
-            constants.COLORTYPE_COLOR_ALPHA,
-            constants.COLORTYPE_ALPHA,
-        ].indexOf(options.inputColorType) === -1) {
-            throw new Error(
-                `option input color type:${
-                    options.inputColorType
-                } is not supported at present`
-            );
+
+        if ([constants.COLORTYPE_GRAYSCALE, constants.COLORTYPE_COLOR, constants.COLORTYPE_COLOR_ALPHA, constants.COLORTYPE_ALPHA,].indexOf(options.inputColorType) === -1) {
+            throw new Error(`option input color type: ${options.inputColorType} is not supported at present`);
         }
+
         if (options.bitDepth !== 8 && options.bitDepth !== 16) {
-            throw new Error(
-                `option bit depth:${ options.bitDepth } is not supported at present`
-            );
+            throw new Error(`option bit depth: ${ options.bitDepth } is not supported at present`);
         }
     }
+
     getDeflateOptions() {
         return {
             chunkSize: this._options.deflateChunkSize,
@@ -771,9 +713,11 @@ class Packer {
             strategy: this._options.deflateStrategy,
         };
     }
+
     createDeflate() {
         return this._options.deflateFactory(this.getDeflateOptions());
     }
+
     filterData(data, width, height) {
         let packedData = bitPacker(data, width, height, this._options);
 
@@ -781,6 +725,7 @@ class Packer {
         let filteredData = filterPacked(packedData, width, height, this._options, bpp);
         return filteredData;
     }
+
     _packChunk(type, data) {
         let len = data ? data.length : 0;
         let buf = Buffer.alloc(len + 12);
@@ -788,25 +733,29 @@ class Packer {
         buf.writeUInt32BE(len, 0);
         buf.writeUInt32BE(type, 4);
 
-        if (data) {
-            data.copy(buf, 8);
-        }
+        if (data) data.copy(buf, 8);
 
         buf.writeInt32BE(
             crc32(buf.subarray(4, buf.length - 4)),
             buf.length - 4
         );
+
         return buf;
     }
+
     packGAMA(gamma) {
         let buf = Buffer.alloc(4);
+
         buf.writeUInt32BE(Math.floor(gamma * constants.GAMMA_DIVISION), 0);
+
         return this._packChunk(constants.TYPE_gAMA, buf);
     }
     packIHDR(width, height) {
         let buf = Buffer.alloc(13);
+
         buf.writeUInt32BE(width, 0);
         buf.writeUInt32BE(height, 4);
+
         buf[8] = this._options.bitDepth;
         buf[9] = this._options.colorType;
         buf[10] = 0;
@@ -815,9 +764,11 @@ class Packer {
 
         return this._packChunk(constants.TYPE_IHDR, buf);
     }
+
     packIDAT(data) {
         return this._packChunk(constants.TYPE_IDAT, data);
     }
+
     packIEND() {
         return this._packChunk(constants.TYPE_IEND, null);
     }
@@ -825,185 +776,145 @@ class Packer {
 
 function pack(metaData, opt) {
     let options = opt || {};
-
     let packer = new Packer(options);
-
     let chunks = [];
 
     chunks.push(Buffer.from(constants.PNG_SIGNATURE));
-
     chunks.push(packer.packIHDR(metaData.width, metaData.height));
 
-    if (metaData.gamma) {
-        chunks.push(packer.packGAMA(metaData.gamma));
-    }
+    if (metaData.gamma) chunks.push(packer.packGAMA(metaData.gamma));
 
-    let filteredData = packer.filterData(
-        metaData.data,
-        metaData.width,
-        metaData.height
-    );
+    let filteredData = packer.filterData(metaData.data, metaData.width, metaData.height);
+    let compressedData = zlib.deflateSync(filteredData, packer.getDeflateOptions());
 
-    let compressedData = zlib.deflateSync(
-        filteredData,
-        packer.getDeflateOptions()
-    );
     filteredData = null;
 
-    if (!compressedData || !compressedData.length) {
-        throw new Error('bad png - invalid compressed data response');
-    }
-    chunks.push(packer.packIDAT(compressedData));
+    if (!compressedData || !compressedData.length) throw new Error('bad png - invalid compressed data response');
 
+    chunks.push(packer.packIDAT(compressedData));
     chunks.push(packer.packIEND());
 
     return Buffer.concat(chunks);
 }
 
-function Inflate(opts) {
-    if (!(this instanceof Inflate)) {
-        return new Inflate(opts);
-    }
-
-    if (opts && opts.chunkSize < zlib.Z_MIN_CHUNK) {
-        opts.chunkSize = zlib.Z_MIN_CHUNK;
-    }
-
-    zlib.Inflate.call(this, opts);
-
-    this._offset = this._offset === undefined ? this._outOffset : this._offset;
-    this._buffer = this._buffer || this._outBuffer;
-
-    if (opts && opts.maxLength !== null) {
-        this._maxLength = opts.maxLength;
-    }
-}
-
 function _close(engine, callback) {
-    if (callback) {
-        process.nextTick(callback);
-    }
-
-    if (!engine._handle) {
-        return;
-    }
+    if (callback) process.nextTick(callback);
+    if (!engine._handle) return;
 
     engine._handle.close();
     engine._handle = null;
 }
 
-Inflate.prototype._processChunk = function processChunk(chunk, flushFlag, asyncCb) {
-    if (typeof asyncCb === 'function') {
-        return zlib.Inflate._processChunk.call(this, chunk, flushFlag, asyncCb);
+class Inflate {
+    constructor(opts) {
+        if (!(this instanceof Inflate)) return new Inflate(opts);
+        if (opts && opts.chunkSize < zlib.Z_MIN_CHUNK) opts.chunkSize = zlib.Z_MIN_CHUNK;
+
+        zlib.Inflate.call(this, opts);
+
+        this._offset = this._offset === undefined ? this._outOffset : this._offset;
+        this._buffer = this._buffer || this._outBuffer;
+
+        if (opts && opts.maxLength !== null) this._maxLength = opts.maxLength;
     }
 
-    let self = this;
+    _processChunk(chunk, flushFlag, asyncCb) {
+        if (typeof asyncCb === 'function') return zlib.Inflate._processChunk.call(this, chunk, flushFlag, asyncCb);
 
-    let availInBefore = chunk && chunk.length;
-    let availOutBefore = this._chunkSize - this._offset;
-    let leftToInflate = this._maxLength;
-    let inOff = 0;
+        let self = this;
+        let availInBefore = chunk && chunk.length;
+        let availOutBefore = this._chunkSize - this._offset;
+        let leftToInflate = this._maxLength;
+        let inOff = 0;
+        let buffers = [];
+        let nread = 0;
+        let error = null;
 
-    let buffers = [];
-    let nread = 0;
+        this.on('error', (err) => error = err);
 
-    let error = null;
+        function handleChunk(availInAfter, availOutAfter) {
+            if (self._hadError) return;
 
-    this.on('error', (err) => {
-        error = err;
-    });
+            let have = availOutBefore - availOutAfter;
 
-    function handleChunk(availInAfter, availOutAfter) {
-        if (self._hadError) {
-            return;
-        }
+            ok(have >= 0, 'have should not go down');
 
-        let have = availOutBefore - availOutAfter;
-        ok(have >= 0, 'have should not go down');
+            if (have > 0) {
+                let out = self._buffer.slice(self._offset, self._offset + have);
 
-        if (have > 0) {
-            let out = self._buffer.slice(self._offset, self._offset + have);
-            self._offset += have;
+                self._offset += have;
 
-            if (out.length > leftToInflate) {
-                out = out.slice(0, leftToInflate);
+                if (out.length > leftToInflate) out = out.slice(0, leftToInflate);
+
+                buffers.push(out);
+
+                nread += out.length;
+                leftToInflate -= out.length;
+
+                if (leftToInflate === 0) return false;
             }
 
-            buffers.push(out);
-            nread += out.length;
-            leftToInflate -= out.length;
-
-            if (leftToInflate === 0) {
-                return false;
+            if (availOutAfter === 0 || self._offset >= self._chunkSize) {
+                availOutBefore = self._chunkSize;
+                self._offset = 0;
+                self._buffer = Buffer.allocUnsafe(self._chunkSize);
             }
+
+            if (availOutAfter === 0) {
+                inOff += availInBefore - availInAfter;
+                availInBefore = availInAfter;
+
+                return true;
+            }
+
+            return false;
         }
 
-        if (availOutAfter === 0 || self._offset >= self._chunkSize) {
-            availOutBefore = self._chunkSize;
-            self._offset = 0;
-            self._buffer = Buffer.allocUnsafe(self._chunkSize);
+        ok(this._handle, 'zlib binding closed');
+
+        let res = null;
+
+        do {
+            res = this._handle.writeSync(
+                flushFlag,
+                chunk,
+                inOff,
+                availInBefore,
+                this._buffer,
+                this._offset,
+                availOutBefore
+            );
+
+            res = res || this._writeState;
+        } while (!this._hadError && handleChunk(res[0], res[1]));
+
+        if (this._hadError) throw error;
+
+        if (nread >= kMaxLength) {
+            _close(this);
+
+            throw new RangeError(`Cannot create final Buffer. It would be larger than 0x${kMaxLength.toString(16)} bytes`);
         }
 
-        if (availOutAfter === 0) {
-            inOff += availInBefore - availInAfter;
-            availInBefore = availInAfter;
+        let buf = Buffer.concat(buffers, nread);
 
-            return true;
-        }
-
-        return false;
-    }
-
-    ok(this._handle, 'zlib binding closed');
-    let res = null;
-    do {
-        res = this._handle.writeSync(
-            flushFlag,
-            chunk,
-            inOff,
-            availInBefore,
-            this._buffer,
-            this._offset,
-            availOutBefore
-        );
-        res = res || this._writeState;
-    } while (!this._hadError && handleChunk(res[0], res[1]));
-
-    if (this._hadError) {
-        throw error;
-    }
-
-    if (nread >= kMaxLength) {
         _close(this);
-        throw new RangeError(
-            `Cannot create final Buffer. It would be larger than 0x${
-                kMaxLength.toString(16)
-            } bytes`
-        );
+
+        return buf;
     }
-
-    let buf = Buffer.concat(buffers, nread);
-    _close(this);
-
-    return buf;
-};
+}
 
 util.inherits(Inflate, zlib.Inflate);
 
 function zlibBufferSync(engine, oldBuffer) {
     let buffer = oldBuffer;
 
-    if (typeof buffer === 'string') {
-        buffer = Buffer.from(buffer);
-    } else if (!(buffer instanceof Buffer)) {
-        throw new TypeError('Not a string or buffer');
-    }
+    if (typeof buffer === 'string') buffer = Buffer.from(buffer);
+    else if (!(buffer instanceof Buffer)) throw new TypeError('Not a string or buffer');
 
     let flushFlag = engine._finishFlushFlag;
 
-    if (flushFlag === null) {
-        flushFlag = zlib.constants.Z_FINISH;
-    }
+    if (flushFlag === null) flushFlag = zlib.constants.Z_FINISH;
 
     return engine._processChunk(buffer, flushFlag);
 }
@@ -1030,10 +941,7 @@ class SyncReader {
         while (this._reads.length > 0 && this._buffer.length) {
             let read = this._reads[0];
 
-            if (
-                this._buffer.length &&
-                (this._buffer.length >= read.length || read.allowLess)
-            ) {
+            if (this._buffer.length && (this._buffer.length >= read.length || read.allowLess)) {
                 this._reads.shift();
 
                 let buf = this._buffer;
@@ -1041,9 +949,7 @@ class SyncReader {
                 this._buffer = buf.slice(read.length);
 
                 read.func.call(this, buf.slice(0, read.length));
-            } else {
-                break;
-            }
+            } else break;
         }
 
         if (this._reads.length > 0) {
@@ -1058,9 +964,11 @@ class SyncReader {
 
 function getByteWidth(width, bpp, depth) {
     let byteWidth = width * bpp;
+
     if (depth !== 8) {
         byteWidth = Math.ceil(byteWidth / (8 / depth));
     }
+
     return byteWidth;
 }
 
@@ -1078,8 +986,10 @@ class Filter {
 
         this._imageIndex = 0;
         this._images = [];
+
         if (interlace) {
             let passes = interlaceUtils.getImagePasses(width, height);
+
             for (let i = 0; i < passes.length; i++) {
                 this._images.push({
                     byteWidth: getByteWidth(passes[i].width, bpp, depth),
@@ -1095,46 +1005,42 @@ class Filter {
             });
         }
 
-        if (depth === 8) {
-            this._xComparison = bpp;
-        } else if (depth === 16) {
-            this._xComparison = bpp * 2;
-        } else {
-            this._xComparison = 1;
-        }
+        if (depth === 8) this._xComparison = bpp;
+        else if (depth === 16) this._xComparison = bpp * 2;
+        else this._xComparison = 1;
     }
+
     start() {
         this.read(
             this._images[this._imageIndex].byteWidth + 1,
             this._reverseFilterLine.bind(this)
         );
     }
-    _unFilterType1(rawData,
-        unfilteredLine,
-        byteWidth) {
+
+    _unFilterType1(rawData, unfilteredLine, byteWidth) {
         let xComparison = this._xComparison;
         let xBiggerThan = xComparison - 1;
 
         for (let x = 0; x < byteWidth; x++) {
             let rawByte = rawData[1 + x];
             let f1Left = x > xBiggerThan ? unfilteredLine[x - xComparison] : 0;
+
             unfilteredLine[x] = rawByte + f1Left;
         }
     }
-    _unFilterType2(rawData,
-        unfilteredLine,
-        byteWidth) {
+
+    _unFilterType2(rawData, unfilteredLine, byteWidth) {
         let lastLine = this._lastLine;
 
         for (let x = 0; x < byteWidth; x++) {
             let rawByte = rawData[1 + x];
             let f2Up = lastLine ? lastLine[x] : 0;
+
             unfilteredLine[x] = rawByte + f2Up;
         }
     }
-    _unFilterType3(rawData,
-        unfilteredLine,
-        byteWidth) {
+
+    _unFilterType3(rawData, unfilteredLine, byteWidth) {
         let xComparison = this._xComparison;
         let xBiggerThan = xComparison - 1;
         let lastLine = this._lastLine;
@@ -1144,12 +1050,12 @@ class Filter {
             let f3Up = lastLine ? lastLine[x] : 0;
             let f3Left = x > xBiggerThan ? unfilteredLine[x - xComparison] : 0;
             let f3Add = Math.floor((f3Left + f3Up) / 2);
+
             unfilteredLine[x] = rawByte + f3Add;
         }
     }
-    _unFilterType4(rawData,
-        unfilteredLine,
-        byteWidth) {
+
+    _unFilterType4(rawData, unfilteredLine, byteWidth) {
         let xComparison = this._xComparison;
         let xBiggerThan = xComparison - 1;
         let lastLine = this._lastLine;
@@ -1160,18 +1066,19 @@ class Filter {
             let f4Left = x > xBiggerThan ? unfilteredLine[x - xComparison] : 0;
             let f4UpLeft = x > xBiggerThan && lastLine ? lastLine[x - xComparison] : 0;
             let f4Add = paethPredictor(f4Left, f4Up, f4UpLeft);
+
             unfilteredLine[x] = rawByte + f4Add;
         }
     }
+
     _reverseFilterLine(rawData) {
         let filter = rawData[0];
         let unfilteredLine = null;
         let currentImage = this._images[this._imageIndex];
         let byteWidth = currentImage.byteWidth;
 
-        if (filter === 0) {
-            unfilteredLine = rawData.slice(1, byteWidth + 1);
-        } else {
+        if (filter === 0) unfilteredLine = rawData.slice(1, byteWidth + 1);
+        else {
             unfilteredLine = Buffer.alloc(byteWidth);
 
             switch (filter) {
@@ -1188,24 +1095,21 @@ class Filter {
                 this._unFilterType4(rawData, unfilteredLine, byteWidth);
                 break;
             default:
-                throw new Error(`Unrecognised filter type - ${ filter}`);
+                throw new Error(`Unrecognised filter type - ${filter}`);
             }
         }
 
         this.write(unfilteredLine);
-
         currentImage.lineIndex++;
+
         if (currentImage.lineIndex >= currentImage.height) {
             this._lastLine = null;
             this._imageIndex++;
             currentImage = this._images[this._imageIndex];
-        } else {
-            this._lastLine = unfilteredLine;
-        }
+        } else this._lastLine = unfilteredLine;
 
-        if (currentImage) {
-            this.read(currentImage.byteWidth + 1, this._reverseFilterLine.bind(this));
-        } else {
+        if (currentImage) this.read(currentImage.byteWidth + 1, this._reverseFilterLine.bind(this));
+        else {
             this._lastLine = null;
             this.complete();
         }
@@ -1215,6 +1119,7 @@ class Filter {
 function FilterSync(inBuffer, bitmapInfo) {
     let outBuffers = [];
     let reader = new SyncReader(inBuffer);
+
     let filter = new Filter(bitmapInfo, {
         read: reader.read.bind(reader),
         write (bufferPart) {
@@ -1236,13 +1141,12 @@ function dePalette(indata, outdata, width, height, palette) {
         for (let x = 0; x < width; x++) {
             let color = palette[indata[pxPos]];
 
-            if (!color) {
-                throw new Error(`index ${ indata[pxPos] } not in palette`);
-            }
+            if (!color) throw new Error(`index ${ indata[pxPos] } not in palette`);
 
             for (let i = 0; i < 4; i++) {
                 outdata[pxPos + i] = color[i];
             }
+
             pxPos += 4;
         }
     }
@@ -1250,26 +1154,21 @@ function dePalette(indata, outdata, width, height, palette) {
 
 function replaceTransparentColor(indata, outdata, width, height, transColor) {
     let pxPos = 0;
+
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
             let makeTrans = false;
 
             if (transColor.length === 1) {
-                if (transColor[0] === indata[pxPos]) {
-                    makeTrans = true;
-                }
-            } else if (
-                transColor[0] === indata[pxPos] &&
-                transColor[1] === indata[pxPos + 1] &&
-                transColor[2] === indata[pxPos + 2]
-            ) {
-                makeTrans = true;
-            }
+                if (transColor[0] === indata[pxPos]) makeTrans = true;
+            } else if (transColor[0] === indata[pxPos] && transColor[1] === indata[pxPos + 1] && transColor[2] === indata[pxPos + 2]) makeTrans = true;
+
             if (makeTrans) {
                 for (let i = 0; i < 4; i++) {
                     outdata[pxPos + i] = 0;
                 }
             }
+
             pxPos += 4;
         }
     }
@@ -1283,10 +1182,9 @@ function scaleDepth(indata, outdata, width, height, depth) {
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
             for (let i = 0; i < 4; i++) {
-                outdata[pxPos + i] = Math.floor(
-                    indata[pxPos + i] * maxOutSample / maxInSample + 0.5
-                );
+                outdata[pxPos + i] = Math.floor(indata[pxPos + i] * maxOutSample / maxInSample + 0.5);
             }
+
             pxPos += 4;
         }
     }
@@ -1299,34 +1197,32 @@ function formatNormaliser(indata, imageData, skipRescale = false) {
     let colorType = imageData.colorType;
     let transColor = imageData.transColor;
     let palette = imageData.palette;
-
     let outdata = indata;
 
-    if (colorType === 3) {
-        dePalette(indata, outdata, width, height, palette);
-    } else {
+    if (colorType === 3) dePalette(indata, outdata, width, height, palette);
+    else {
         if (transColor) {
             replaceTransparentColor(indata, outdata, width, height, transColor);
         }
 
         if (depth !== 8 && !skipRescale) {
-            if (depth === 16) {
-                outdata = Buffer.alloc(width * height * 4);
-            }
+            if (depth === 16) outdata = Buffer.alloc(width * height * 4);
+
             scaleDepth(indata, outdata, width, height, depth);
         }
     }
+
     return outdata;
 }
 
 let pixelBppMapper = [
     function zero() {},
+
     function one(pxData, data, pxPos, rawPos) {
-        if (rawPos === data.length) {
-            throw new Error('Ran out of data');
-        }
+        if (rawPos === data.length) throw new Error('Ran out of data');
 
         let pixel = data[rawPos];
+
         pxData[pxPos] = pixel;
         pxData[pxPos + 1] = pixel;
         pxData[pxPos + 2] = pixel;
@@ -1334,11 +1230,10 @@ let pixelBppMapper = [
     },
 
     function two(pxData, data, pxPos, rawPos) {
-        if (rawPos + 1 >= data.length) {
-            throw new Error('Ran out of data');
-        }
+        if (rawPos + 1 >= data.length) throw new Error('Ran out of data');
 
         let pixel = data[rawPos];
+
         pxData[pxPos] = pixel;
         pxData[pxPos + 1] = pixel;
         pxData[pxPos + 2] = pixel;
@@ -1346,9 +1241,7 @@ let pixelBppMapper = [
     },
 
     function three(pxData, data, pxPos, rawPos) {
-        if (rawPos + 2 >= data.length) {
-            throw new Error('Ran out of data');
-        }
+        if (rawPos + 2 >= data.length) throw new Error('Ran out of data');
 
         pxData[pxPos] = data[rawPos];
         pxData[pxPos + 1] = data[rawPos + 1];
@@ -1357,9 +1250,7 @@ let pixelBppMapper = [
     },
 
     function four(pxData, data, pxPos, rawPos) {
-        if (rawPos + 3 >= data.length) {
-            throw new Error('Ran out of data');
-        }
+        if (rawPos + 3 >= data.length) throw new Error('Ran out of data');
 
         pxData[pxPos] = data[rawPos];
         pxData[pxPos + 1] = data[rawPos + 1];
@@ -1373,6 +1264,7 @@ let pixelBppCustomMapper = [
 
     function one(pxData, pixelData, pxPos, maxBit) {
         let pixel = pixelData[0];
+
         pxData[pxPos] = pixel;
         pxData[pxPos + 1] = pixel;
         pxData[pxPos + 2] = pixel;
@@ -1381,6 +1273,7 @@ let pixelBppCustomMapper = [
 
     function two(pxData, pixelData, pxPos) {
         let pixel = pixelData[0];
+
         pxData[pxPos] = pixel;
         pxData[pxPos + 1] = pixel;
         pxData[pxPos + 2] = pixel;
@@ -1407,9 +1300,8 @@ function bitRetriever(data, depth) {
     let i = 0;
 
     function split() {
-        if (i === data.length) {
-            throw new Error('Ran out of data');
-        }
+        if (i === data.length) throw new Error('Ran out of data');
+
         let byte = data[i];
 
         i++;
@@ -1462,13 +1354,18 @@ function bitRetriever(data, depth) {
             while (leftOver.length < count) {
                 split();
             }
+
             let returner = leftOver.slice(0, count);
+
             leftOver = leftOver.slice(count);
+
             return returner;
         },
+
         resetAfterLine() {
             leftOver.length = 0;
         },
+
         end() {
             if (i !== data.length) {
                 throw new Error('extra data found');
@@ -1486,10 +1383,12 @@ function mapImage8Bit(image, pxData, getPxPos, bpp, data, position) {
     for (let y = 0; y < imageHeight; y++) {
         for (let x = 0; x < imageWidth; x++) {
             let pxPos = getPxPos(x, y, imagePass);
+
             pixelBppMapper[bpp](pxData, data, pxPos, rawPos);
             rawPos += bpp;
         }
     }
+
     return rawPos;
 }
 
@@ -1497,10 +1396,12 @@ function mapImageCustomBit(image, pxData, getPxPos, bpp, bits, maxBit) {
     let imageWidth = image.width;
     let imageHeight = image.height;
     let imagePass = image.index;
+
     for (let y = 0; y < imageHeight; y++) {
         for (let x = 0; x < imageWidth; x++) {
             let pixelData = bits.get(bpp);
             let pxPos = getPxPos(x, y, imagePass);
+
             pixelBppCustomMapper[bpp](pxData, pixelData, pxPos, maxBit);
         }
         bits.resetAfterLine();
@@ -1515,15 +1416,13 @@ function bitmapper(data, bitmapInfo) {
     let interlace = bitmapInfo.interlace;
     let bits = null;
 
-    if (depth !== 8) {
-        bits = bitRetriever(data, depth);
-    }
+    if (depth !== 8) bits = bitRetriever(data, depth);
+
     let pxData = null;
-    if (depth <= 8) {
-        pxData = Buffer.alloc(width * height * 4);
-    } else {
-        pxData = new Uint16Array(width * height * 4);
-    }
+
+    if (depth <= 8) pxData = Buffer.alloc(width * height * 4);
+    else pxData = new Uint16Array(width * height * 4);
+
     let maxBit = Math.pow(2, depth) - 1;
     let rawPos = 0;
     let images = null;
@@ -1544,43 +1443,28 @@ function bitmapper(data, bitmapInfo) {
 
     for (let imageIndex = 0; imageIndex < images.length; imageIndex++) {
         if (depth === 8) {
-            rawPos = mapImage8Bit(
-                images[imageIndex],
-                pxData,
-                getPxPos,
-                bpp,
-                data,
-                rawPos
-            );
+            rawPos = mapImage8Bit(images[imageIndex], pxData, getPxPos, bpp, data, rawPos);
         } else {
-            mapImageCustomBit(
-                images[imageIndex],
-                pxData,
-                getPxPos,
-                bpp,
-                bits,
-                maxBit
-            );
+            mapImageCustomBit(images[imageIndex], pxData, getPxPos, bpp, bits, maxBit);
         }
     }
+
     if (depth === 8) {
-        if (rawPos !== data.length) {
-            throw new Error('extra data found');
-        }
-    } else {
-        bits.end();
-    }
+        if (rawPos !== data.length) throw new Error('extra data found');
+    } else bits.end();
 
     return pxData;
 }
 
 function parse(buffer, options) {
     let err = null;
+
     function handleError(_err_) {
         err = _err_;
     }
 
     let metaData = null;
+
     function handleMetaData(_metaData_) {
         metaData = _metaData_;
     }
@@ -1604,6 +1488,7 @@ function parse(buffer, options) {
     }
 
     let inflateDataList = [];
+
     function handleInflateData(inflatedData) {
         inflateDataList.push(inflatedData);
     }
@@ -1624,17 +1509,16 @@ function parse(buffer, options) {
     parser.start();
     reader.process();
 
-    if (err) {
-        throw err;
-    }
+    if (err) throw err;
 
     let inflateData = Buffer.concat(inflateDataList);
+
     inflateDataList.length = 0;
 
     let inflatedData = null;
-    if (metaData.interlace) {
-        inflatedData = zlib.inflateSync(inflateData);
-    } else {
+
+    if (metaData.interlace) inflatedData = zlib.inflateSync(inflateData);
+    else {
         let rowSize = (metaData.width * metaData.bpp * metaData.depth + 7 >> 3) + 1;
         let imageSize = rowSize * metaData.height;
 
@@ -1643,16 +1527,17 @@ function parse(buffer, options) {
             maxLength: imageSize,
         });
     }
+
     inflateData = null;
 
-    if (!inflatedData || !inflatedData.length) {
-        throw new Error('bad png - invalid inflate data response');
-    }
+    if (!inflatedData || !inflatedData.length) throw new Error('bad png - invalid inflate data response');
 
     let unfilteredData = FilterSync(inflatedData, metaData);
+
     inflateData = null;
 
     let bitmapData = bitmapper(unfilteredData, metaData);
+
     unfilteredData = null;
 
     let normalisedBitmapData = formatNormaliser(
@@ -1673,5 +1558,10 @@ exports.decodePNG = function decode(buffer, options) {
 };
 
 exports.encodePNG = function encode(png, options) {
-    return pack(png, options);
+    return {
+        width: png.width,
+        height: png.height,
+        data: pack(png, options),
+        format: 'png',
+    };
 };

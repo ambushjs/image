@@ -5,7 +5,7 @@ const encodeJPEG = require('../encoders/jpeg');
 
 module.exports = class ImageEncoder {
     constructor(data, formatted) {
-        if (formatted === 'unknown') throw new TypeError('[AmbushImage] Given image format is not valid.');
+        if (!formatted) throw new TypeError('[AmbushImage] Given image format is not valid.');
 
         return this[formatted](data);
     }
@@ -15,12 +15,7 @@ module.exports = class ImageEncoder {
     }
 
     png(data) {
-        return {
-            width: data.width,
-            height: data.height,
-            data: encodePNG(data),
-            format: 'png',
-        };
+        return encodePNG(data);
     }
 
     bmp(data) {

@@ -1,4 +1,4 @@
-type FormatTypes = 'jpeg' | 'png' | 'bmp' | 'tiff' | 'unknown';
+type FormatTypes = 'jpeg' | 'png' | 'bmp' | 'tiff';
 
 interface FormatResult {
     width: number;
@@ -16,7 +16,7 @@ export class ImageDecoder {
     tiff(buffer: Buffer): FormatResult;
 }
 
-export class ImageDecoder {
+export class ImageEncoder {
     constructor(data: FormatResult, formatted: FormatTypes): FormatResult;
 
     jpeg(data: FormatResult): FormatResult;
@@ -27,3 +27,5 @@ export class ImageDecoder {
 
 export function decodeImage(buffer: Buffer): FormatResult;
 export function encodeImage(buffer: FormatResult, format: FormatTypes): FormatResult;
+
+export function imageFormat(buffer: Buffer): FormatTypes | null;

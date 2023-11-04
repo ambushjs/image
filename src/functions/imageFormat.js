@@ -4,5 +4,5 @@ module.exports = function format(buffer) {
     else if (buffer[0] === 0x42 && buffer[1] === 0x4D) return 'bmp';
     else if (buffer[0] === 0x49 && buffer[1] === 0x49 && buffer[2] === 0x2A || buffer[0] === 0x4D && buffer[1] === 0x4D && buffer[2] === 0x00 && buffer[3] === 0x2A) return 'tiff';
 
-    return 'unknown';
+    return null;
 };
