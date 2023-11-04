@@ -1,6 +1,6 @@
 {
   "name": "@ambush/image",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "All-in-one library to decode & encode images.",
   "license": "Apache-2.0",
   "author": "Zeptar <thezeptar@gmail.com>",
@@ -37,9 +37,5 @@
   ],
   "files": [
     "src/"
-  ],
-  "devDependencies": {
-    "eslint": "^8.52.0",
-    "standard-version": "^9.5.0"
-  }
+  ]
 }
