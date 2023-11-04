@@ -17,14 +17,11 @@
     "lib": "./src",
     "test": "./test"
   },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  },
   "scripts": {
     "start": "node src",
     "lint": "eslint .",
     "fix": "eslint . --fix",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node src && node tests"
   },
   "typings": "./src/index.d.ts",
   "keywords": [
@@ -37,5 +34,9 @@
   ],
   "files": [
     "src/"
-  ]
+  ],
+  "devDependencies": {
+    "eslint": "^8.53.0",
+    "standard-version": "^9.5.0"
+  }
 }
