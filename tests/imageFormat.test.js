@@ -12,4 +12,4 @@ module.exports = function testImageFormat() {
     assert.strictEqual(imageFormat(imageJPEG), 'jpeg');
     assert.strictEqual(imageFormat(imageBMP), 'bmp');
     assert.strictEqual(imageFormat(imageTIFF), 'tiff');
-}
+};
