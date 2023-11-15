@@ -1,5 +1,3 @@
-
-
 class BmpDecoder {
     constructor(buffer, alpha) {
         this.pos = 0;
